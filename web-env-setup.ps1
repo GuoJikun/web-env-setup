@@ -107,38 +107,6 @@ function Write-Log {
     Write-Host $msg -ForegroundColor $color
 }
 
-
-
-Write-Log "`n⚙️ 安装 Volta ..." "Cyan"
-
-# --------------------------
-# 检查环境变量 VOLTA_FEATURE_PNPM
-# --------------------------
-$val = [System.Environment]::GetEnvironmentVariable("VOLTA_FEATURE_PNPM", "Machine")
-if (-not $val) {
-    $val = [System.Environment]::GetEnvironmentVariable("VOLTA_FEATURE_PNPM", "User")
-}
-
-if ($val -eq "1") {
-    Write-Log "✅ VOLTA_FEATURE_PNPM 已设置，跳过" "Green"
-}
-else {
-    $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-    if ($isAdmin) {
-        [System.Environment]::SetEnvironmentVariable("VOLTA_FEATURE_PNPM", "1", "Machine")
-        Write-Log "✅ 已设置系统级别的环境变量 VOLTA_FEATURE_PNPM = 1" "Green"
-    }
-    else {
-        [System.Environment]::SetEnvironmentVariable("VOLTA_FEATURE_PNPM", "1", "User")
-        Write-Log "⚠️ 未以管理员身份运行，已设置用户级别的环境变量 VOLTA_FEATURE_PNPM = 1" "Yellow"
-    }
-}
-
-# ==========================
-# 在安装 Volta 之前：使用 winget 检查并安装 Git 与 Visual Studio Code（如未安装）
-# 该步骤为幂等：先检测是否存在命令，再决定是否调用 winget 安装。需要管理员权限时会尝试提升权限。
-# ==========================
-
 Write-Log "`n⚙️ 检查并安装 Git..." "Cyan"
 # 检测 git 是否安装
 if (Installed 'Git.Git') {
@@ -163,7 +131,31 @@ else {
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User") 
 }
 
-# ==========================
+Write-Log "`n⚙️ 检测并安装 Volta ..." "Cyan"
+
+# --------------------------
+# 检查环境变量 VOLTA_FEATURE_PNPM
+# --------------------------
+$val = [System.Environment]::GetEnvironmentVariable("VOLTA_FEATURE_PNPM", "Machine")
+if (-not $val) {
+    $val = [System.Environment]::GetEnvironmentVariable("VOLTA_FEATURE_PNPM", "User")
+}
+
+if ($val -eq "1") {
+    Write-Log "✅ VOLTA_FEATURE_PNPM 已设置，跳过" "Green"
+}
+else {
+    $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+    if ($isAdmin) {
+        [System.Environment]::SetEnvironmentVariable("VOLTA_FEATURE_PNPM", "1", "Machine")
+        Write-Log "✅ 已设置系统级别的环境变量 VOLTA_FEATURE_PNPM = 1" "Green"
+    }
+    else {
+        [System.Environment]::SetEnvironmentVariable("VOLTA_FEATURE_PNPM", "1", "User")
+        Write-Log "⚠️ 未以管理员身份运行，已设置用户级别的环境变量 VOLTA_FEATURE_PNPM = 1" "Yellow"
+    }
+}
+
 if (Installed 'Volta.Volta') {
     Write-Log "✅ Volta 已安装，跳过" "Green"
 }

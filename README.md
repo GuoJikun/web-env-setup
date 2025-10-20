@@ -1,6 +1,12 @@
 # 一键设置 Web 前端开发环境
 
+> 安装软件依赖 [Winget](https://apps.microsoft.com/detail/9nblggh4nns1?hl=zh-cn&gl=CN&ocid=pdpshare)
+> 
 > 建议使用 Powershell 7+，低于 7 版本可能会出现中文乱码
+
+```ps1
+irm https://raw.githubusercontent.com/GuoJikun/web-env-setup/refs/heads/main/web-env-setup.ps1 | iex
+```
 
 自动安装的软件包括：
 
