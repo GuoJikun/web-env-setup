@@ -1,6 +1,40 @@
 # 设置脚本在出错时停止
 $ErrorActionPreference = "Stop"
 
+# 使用 Winget 判断软件是否以安装
+function Installed {
+    param (
+        [string]$packageId
+    )
+    try {
+        # 屏蔽 winget 的错误输出，使用 -SimpleMatch 避免正则，-Quiet 返回布尔
+        $found = winget list --id $PackageId 2>$null | Select-String -SimpleMatch -Quiet $PackageId
+        return [bool]$found
+    }
+    catch {
+        # 如果 winget 不存在或运行失败，返回 $false（也可以选择写日志或抛出错误）
+        return $false
+    }
+}
+
+# 使用 winget 安装软件
+function WingetInstall {
+    param(
+        [Parameter(Mandatory = $true)][string]$PackageId,
+        [Parameter(Mandatory = $false)][string]$DisplayName = $PackageId
+    )
+
+    $installCmd = "winget install $PackageId --accept-source-agreements --accept-package-agreements -e"
+    Write-Log "🔧 使用 winget 安装 $DisplayName..." "Cyan"
+    Invoke-Expression $installCmd
+    if ($LASTEXITCODE -ne 0) { 
+        Write-Log "❌ 使用 winget 安装 $DisplayName 失败（ExitCode=$LASTEXITCODE）。" "Red" 
+    }
+    else { 
+        Write-Log "✅ 已通过 winget 安装 $DisplayName 成功。" "Green" 
+    }
+}
+
 # -------------------------
 # PowerShell 版本检查与自动安装（确保运行在 PowerShell 7+）
 function Restart-InPwsh7IfNeeded {
@@ -100,57 +134,40 @@ else {
     }
 }
 
-
-
-
-# ==========================
 # ==========================
 # 在安装 Volta 之前：使用 winget 检查并安装 Git 与 Visual Studio Code（如未安装）
 # 该步骤为幂等：先检测是否存在命令，再决定是否调用 winget 安装。需要管理员权限时会尝试提升权限。
 # ==========================
 
-Write-Log "`n⚙️ 检查并安装 Git 与 Visual Studio Code（通过 winget）..." "Cyan"
-
-# Helper: 使用 winget 安装包，自动接受协议并在非管理员时尝试提升
-function Ensure-WingetInstall {
-    param(
-        [Parameter(Mandatory = $true)][string]$PackageId,
-        [Parameter(Mandatory = $false)][string]$DisplayName = $PackageId
-    )
-
-    $installCmd = "winget install $PackageId --accept-source-agreements --accept-package-agreements -e"
-    Write-Log "🔧 使用 winget 安装 $DisplayName..." "Cyan"
-    Invoke-Expression $installCmd
-    if ($LASTEXITCODE -ne 0) { Write-Log "❌ 使用 winget 安装 $DisplayName 失败（ExitCode=$LASTEXITCODE）。" "Red" }
-    else { Write-Log "✅ 已通过 winget 安装 $DisplayName 成功。" "Green" }
-}
-# 首先尝试检测 'code' 命令或常见安装注册表；若未找到则使用 winget
-if (Get-Command code -ErrorAction SilentlyContinue) {
-    Write-Log "✅ Visual Studio Code (code) 命令可用，跳过" "Green"
+Write-Log "`n⚙️ 检查并安装 Git..." "Cyan"
+# 检测 git 是否安装
+if (Installed 'Git.Git') {
+    Write-Log "✅ Git 已安装，跳过" "Green"
 }
 else {
-    # 额外检查常见安装目录（便于用户通过安装程序安装但未将 code 加入 PATH 的情况）
-    $vscodeFound = $false
-    $possiblePaths = @(
-        "$env:ProgramFiles\Microsoft VS Code\Code.exe",
-        "$env:ProgramFiles(x86)\Microsoft VS Code\Code.exe",
-        "$env:LocalAppData\Programs\Microsoft VS Code\Code.exe"
-    )
-    foreach ($p in $possiblePaths) { if (Test-Path $p) { $vscodeFound = $true; break } }
+    Write-Log "⚠️ 未检测到 Git，尝试使用 winget 安装 Git..." "Yellow"
+    WingetInstall -PackageId 'Git.Git' -DisplayName 'Git'
+    # 刷新 PATH
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User") 
+}
 
-    if ($vscodeFound) {
-        Write-Log "✅ 已找到 Visual Studio Code 安装，但 'code' 命令不可用。请手动在 VS Code 中启用 'Shell Command: Install 'code' command in PATH' 或重新登录会话。" "Yellow"
-    }
-    else {
-        Write-Log "⚠️ 未检测到 Visual Studio Code，尝试使用 winget 安装 VS Code..." "Yellow"
-        Ensure-WingetInstall -PackageId 'Microsoft.VisualStudioCode' -DisplayName 'Visual Studio Code'
-        # 刷新 PATH
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-    }
+Write-Log "`n⚙️ 检查并安装 Visual Studio Code..." "Cyan"
+# 检测 vscode 是否安装
+if (Installed 'Microsoft.VisualStudioCode') {
+    Write-Log "✅ Visual Studio Code (code) 已安装，跳过" "Green"
+}
+else {
+    Write-Log "⚠️ 未检测到 Visual Studio Code，尝试使用 winget 安装 VS Code..." "Yellow"
+    WingetInstall -PackageId 'Microsoft.VisualStudioCode' -DisplayName 'Visual Studio Code'
+    # 刷新 PATH
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User") 
 }
 
 # ==========================
-if (!(Get-Command volta -ErrorAction SilentlyContinue)) {
+if (Installed 'Volta.Volta') {
+    Write-Log "✅ Volta 已安装，跳过" "Green"
+}
+else {
     Write-Log "⚠️ Volta 未安装，尝试使用 winget 安装 Volta..." "Yellow"
     winget install Volta.Volta --accept-source-agreements --accept-package-agreements
     if ($LASTEXITCODE -eq 0) {
@@ -168,9 +185,6 @@ if (!(Get-Command volta -ErrorAction SilentlyContinue)) {
     else {
         Write-Log "❌ 使用 winget 安装 Volta 失败，请手动检查。" "Red"
     }
-}
-else {
-    Write-Log "✅ Volta 已安装，跳过" "Green"
 }
 
 # ==========================
@@ -215,16 +229,13 @@ Write-Log "请重新打开终端以应用环境变量。" "Yellow"
 # -------------------------
 Write-Log "`n⚙️ 可选软件安装（Snipaste, Chrome, Firefox, QQ, 微信）..." "Cyan"
 
-# 是否以环境变量自动全部安装（绕过交互）
-$autoInstallAll = $env:WEB_ENV_SETUP_INSTALL_OPTIONAL -eq '1'
-
 $optionalPkgs = @(
-    @{ Id = 'liule.Snipaste'; Name = 'Snipaste';  },
+    @{ Id = 'liule.Snipaste'; Name = 'Snipaste'; },
     @{ Id = 'Google.Chrome'; Name = 'Google Chrome'; },
     @{ Id = 'Mozilla.Firefox'; Name = 'Mozilla Firefox'; },
     @{ Id = 'Tencent.QQ'; Name = 'QQ'; },
     @{ Id = 'Tencent.WeChat'; Name = 'WeChat'; }
-    )
+)
 
 function Show-MultiSelect {
     param(
@@ -288,7 +299,7 @@ else {
         $found = winget list --id $pkg.Id | Select-String $pkg.Id
         if ($found) { Write-Log "✅ 检测到 $($pkg.Name) 已安装，跳过安装。" "Green"; continue }
         Write-Log "⚠️ 使用 winget 安装 $($pkg.Name)..." "Yellow"
-        Ensure-WingetInstall -PackageId $pkg.Id -DisplayName $pkg.Name
+        WingetInstall -PackageId $pkg.Id -DisplayName $pkg.Name
     }
 }
 
