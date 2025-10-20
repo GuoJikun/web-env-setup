@@ -2,6 +2,10 @@
 
 > 建议使用 Powershell 7+，低于 7 版本可能会出现中文乱码
 
+```ps1
+irm https://raw.githubusercontent.com/GuoJikun/web-env-setup/refs/heads/main/web-env-setup.ps1 | iex
+```
+
 自动安装的软件包括：
 
 - git
