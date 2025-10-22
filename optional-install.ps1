@@ -28,7 +28,7 @@ function Write-Log {
 # ---------------------------------------
 Write-Log "`n⚙️ 可选软件安装（Snipaste, Chrome, Firefox, QQ, 微信）..." "Cyan"
 
-$installBasePath = "D:\Apps"
+$installBasePath = "D:\Software"
 
 $optionalPkgs = @(
     @{ Id = 'liule.Snipaste'; Name = 'Snipaste'; },
