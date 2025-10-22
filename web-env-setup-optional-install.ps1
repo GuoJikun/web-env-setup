@@ -6,6 +6,15 @@
 # 停止出错时继续执行
 $ErrorActionPreference = "Stop"
 
+# 允许 Ctrl+C 被当作输入处理
+[Console]::TreatControlCAsInput = $true
+
+# 处理 Ctrl+C 中断
+trap {
+    Write-Log "脚本被中断，正在退出..." "Yellow"
+    exit
+}
+
 function Write-Log {
     param(
         [Parameter(Mandatory = $true)][string]$msg,
@@ -26,7 +35,12 @@ $optionalPkgs = @(
     @{ Id = 'Google.Chrome'; Name = 'Google Chrome'; },
     @{ Id = 'Mozilla.Firefox'; Name = 'Mozilla Firefox'; },
     @{ Id = 'Tencent.QQ'; Name = 'QQ'; },
-    @{ Id = 'Tencent.WeChat'; Name = 'WeChat'; }
+    @{ Id = 'Tencent.WeChat'; Name = 'WeChat'; },
+    @{ Id = 'agalwood.Motrix'; Name = 'Motrix'; },
+    @{ Id = 'iQIYI.iQIYI'; Name = '爱奇艺'; },
+    @{ Id = 'Tencent.TencentVideo'; Name = '腾讯视频'; },
+    @{ Id = 'Youku.Youku'; Name = '优酷'; },
+    @{ Id = 'NetEase.CloudMusic'; Name = '网易云音乐'; }
 )
 
 # ---------------------------------------
@@ -52,17 +66,24 @@ function Show-MultiSelect {
 
     RenderAll
     while ($true) {
-        $key = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
-        $vk = $key.VirtualKeyCode
-        $ch = $key.Character
+        $key = [Console]::ReadKey($true)
+        
+        # 检查 Ctrl+C
+        if ($key.KeyChar -eq [char]3) {
+            Write-Log "Ctrl+C 按下，正在退出..." "Yellow"
+            exit
+        }
+        
+        $vk = $key.Key
+        $ch = $key.KeyChar
 
-        if ($vk -eq 13 -or $ch -eq "`r" -or $ch -eq "`n") { break }
-        if ($vk -eq 27 -or ([int][char]$ch) -eq 27) { $selected = @(); break }
+        if ($vk -eq [System.ConsoleKey]::Enter) { break }
+        if ($vk -eq [System.ConsoleKey]::Escape) { $selected = @(); break }
 
         switch ($vk) {
-            38 { if ($cursor -gt 0) { $cursor-- } else { $cursor = $Options.Count - 1 }; RenderAll }
-            40 { if ($cursor -lt $Options.Count - 1) { $cursor++ } else { $cursor = 0 }; RenderAll }
-            32 { $selected[$cursor] = -not $selected[$cursor]; RenderAll }
+            ([System.ConsoleKey]::UpArrow) { if ($cursor -gt 0) { $cursor-- } else { $cursor = $Options.Count - 1 }; RenderAll }
+            ([System.ConsoleKey]::DownArrow) { if ($cursor -lt $Options.Count - 1) { $cursor++ } else { $cursor = 0 }; RenderAll }
+            ([System.ConsoleKey]::Spacebar) { $selected[$cursor] = -not $selected[$cursor]; RenderAll }
             default { if ($ch -eq ' ') { $selected[$cursor] = -not $selected[$cursor]; RenderAll } }
         }
     }
@@ -97,11 +118,11 @@ function Get-OverrideForInstaller {
 
     $path = Join-Path $installBasePath $name
     switch -Regex ($installerType) {
-        'inno'     { return "/DIR=$path" }
-        'nsis'     { return "/D=$path" }
+        'inno' { return "/DIR=$path" }
+        'nsis' { return "/D=$path" }
         'nullsoft' { return "/D=$path" }
-        'msi'      { return "INSTALLDIR=$path" }
-        default    { return $null }
+        'msi' { return "INSTALLDIR=$path" }
+        default { return $null }
     }
 }
 
@@ -117,7 +138,7 @@ function WingetInstall {
 
     Write-Log "🚀 正在安装 $DisplayName ..." "Cyan"
 
-    $args = @(
+    $wingetArgs = @(
         "install",
         "--id", $PackageId,
         "--exact",
@@ -127,19 +148,21 @@ function WingetInstall {
     )
 
     if ($ExtraArgs -and $ExtraArgs.Trim() -ne "") {
-        $args += $ExtraArgs
+        $wingetArgs += $ExtraArgs
     }
 
-    Write-Log "📦 执行命令：winget $($args -join ' ')" "Gray"
+    Write-Log "📦 执行命令：winget $($wingetArgs -join ' ')" "Gray"
 
     try {
-        $process = Start-Process -FilePath "winget" -ArgumentList $args -Wait -PassThru -NoNewWindow
+        $process = Start-Process -FilePath "winget" -ArgumentList $wingetArgs -Wait -PassThru -NoNewWindow
         if ($process.ExitCode -eq 0) {
             Write-Log "✅ $DisplayName 安装完成。" "Green"
-        } else {
+        }
+        else {
             Write-Log "❌ $DisplayName 安装失败（退出码：$($process.ExitCode)）。" "Red"
         }
-    } catch {
+    }
+    catch {
         Write-Log "💥 安装 $DisplayName 时发生异常：$($_.Exception.Message)" "Red"
     }
 }
@@ -148,7 +171,7 @@ function WingetInstall {
 # 主执行逻辑
 # ---------------------------------------
 $names = $optionalPkgs | ForEach-Object { $_.Name }
-$sel = Show-MultiSelect -Options $names -Title "请选择要安装的可选软件（空格切换，回车确认）："
+$sel = Show-MultiSelect -Options $names -Title "请选择要安装的软件（上下键切换，空格选择，回车确认，Esc/Ctrl+C 取消）："
 
 if ($null -eq $sel -or $sel.Count -eq 0) {
     Write-Log "ℹ️ 未选择任何可选软件，跳过安装。" "Yellow"
@@ -174,7 +197,8 @@ foreach ($i in $sel) {
     $type = Get-InstallerType -PackageId $pkgId
     if ($type) {
         Write-Log "🧩 检测到安装器类型：$type" "Gray"
-    } else {
+    }
+    else {
         Write-Log "⚠️ 无法检测安装器类型，使用默认安装方式。" "Yellow"
     }
 
