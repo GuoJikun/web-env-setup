@@ -31,18 +31,18 @@ Write-Log "`n⚙️ 可选软件安装 ..." "Cyan"
 $installBasePath = if ($env:OPTIONAL_INSTALL_PATH) { $env:OPTIONAL_INSTALL_PATH } else { "D:\Software" }
 
 $optionalPkgs = @(
-    @{ Id = 'liule.Snipaste'; Name = 'Snipaste'; },
-    @{ Id = 'Google.Chrome'; Name = 'Google Chrome'; },
-    @{ Id = 'Mozilla.Firefox'; Name = 'Mozilla Firefox'; },
-    @{ Id = 'Tencent.QQ'; Name = 'QQ'; },
-    @{ Id = 'Tencent.WeChat'; Name = 'WeChat'; },
-    @{ Id = 'agalwood.Motrix'; Name = 'Motrix'; },
-    @{ Id = 'iQIYI.iQIYI'; Name = '爱奇艺'; },
-    @{ Id = 'Tencent.TencentVideo'; Name = '腾讯视频'; },
-    @{ Id = 'Youku.Youku'; Name = '优酷'; },
-    @{ Id = 'NetEase.CloudMusic'; Name = '网易云音乐'; },
-    @{ Id = 'Tencent.Foxmail'; Name = 'Foxmail'; },
-    @{ Id = '2dust.v2rayN'; Name = 'v2rayN'; }
+    @{ Id = 'liule.Snipaste'; Name = 'Snipaste'; Dir = 'Snipaste' },
+    @{ Id = 'Google.Chrome'; Name = 'Google Chrome'; Dir = 'Chrome' },
+    @{ Id = 'Mozilla.Firefox'; Name = 'Mozilla Firefox'; Dir = 'Firefox' },
+    @{ Id = 'Tencent.QQ'; Name = 'QQ'; Dir = 'QQ' },
+    @{ Id = 'Tencent.WeChat'; Name = '微信'; Dir = 'wechat' },
+    @{ Id = 'agalwood.Motrix'; Name = 'Motrix'; Dir = 'Motrix' },
+    @{ Id = 'iQIYI.iQIYI'; Name = '爱奇艺'; Dir = 'iqiyi' },
+    @{ Id = 'Tencent.TencentVideo'; Name = '腾讯视频'; Dir = 'TencentVideo' },
+    @{ Id = 'Youku.Youku'; Name = '优酷'; Dir = 'Youku' },
+    @{ Id = 'NetEase.CloudMusic'; Name = '网易云音乐'; Dir = 'CloudMusic' },
+    @{ Id = 'Tencent.Foxmail'; Name = 'Foxmail'; Dir = 'Foxmail' },
+    @{ Id = '2dust.v2rayN'; Name = 'v2rayN'; Dir = 'v2rayN' }
 )
 
 # ---------------------------------------
@@ -115,10 +115,10 @@ function Get-InstallerType {
 function Get-OverrideForInstaller {
     param(
         [string]$installerType,
-        [string]$name
+        [string]$dir
     )
 
-    $path = Join-Path $installBasePath $name
+    $path = Join-Path $installBasePath $dir
     switch -Regex ($installerType) {
         'inno' { return "/DIR=$path" }
         'nsis' { return "/D=$path" }
@@ -186,6 +186,7 @@ foreach ($i in $sel) {
     $pkg = $optionalPkgs[$i]
     $pkgId = $pkg.Id
     $pkgName = $pkg.Name
+    $pkgDir = $pkg.Dir
 
     # 检测是否已安装
     $found = winget list --id $pkgId | Select-String $pkgId
@@ -205,7 +206,7 @@ foreach ($i in $sel) {
     }
 
     # 生成 override 参数
-    $override = Get-OverrideForInstaller -installerType $type -name $pkgName
+    $override = Get-OverrideForInstaller -installerType $type -dir $pkgDir
     if ($override) {
         Write-Log "⚙️ 使用 --override 参数安装至 $installBasePath\$pkgName" "Yellow"
         WingetInstall -PackageId $pkgId -DisplayName $pkgName -ExtraArgs "--override `"$override`""
