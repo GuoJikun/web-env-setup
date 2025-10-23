@@ -40,7 +40,8 @@ $optionalPkgs = @(
     @{ Id = 'iQIYI.iQIYI'; Name = '爱奇艺'; },
     @{ Id = 'Tencent.TencentVideo'; Name = '腾讯视频'; },
     @{ Id = 'Youku.Youku'; Name = '优酷'; },
-    @{ Id = 'NetEase.CloudMusic'; Name = '网易云音乐'; }
+    @{ Id = 'NetEase.CloudMusic'; Name = '网易云音乐'; },
+    @{ Id = 'Tencent.Foxmail'; Name = 'Foxmail'; }
 )
 
 # ---------------------------------------
