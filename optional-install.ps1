@@ -26,9 +26,9 @@ function Write-Log {
 # ---------------------------------------
 # 可选软件列表
 # ---------------------------------------
-Write-Log "`n⚙️ 可选软件安装（Snipaste, Chrome, Firefox, QQ, 微信）..." "Cyan"
+Write-Log "`n⚙️ 可选软件安装 ..." "Cyan"
 
-$installBasePath = "D:\Software"
+$installBasePath = if ($env:OPTIONAL_INSTALL_PATH) { $env:OPTIONAL_INSTALL_PATH } else { "D:\Software" }
 
 $optionalPkgs = @(
     @{ Id = 'liule.Snipaste'; Name = 'Snipaste'; },
@@ -41,7 +41,8 @@ $optionalPkgs = @(
     @{ Id = 'Tencent.TencentVideo'; Name = '腾讯视频'; },
     @{ Id = 'Youku.Youku'; Name = '优酷'; },
     @{ Id = 'NetEase.CloudMusic'; Name = '网易云音乐'; },
-    @{ Id = 'Tencent.Foxmail'; Name = 'Foxmail'; }
+    @{ Id = 'Tencent.Foxmail'; Name = 'Foxmail'; },
+    @{ Id = '2dust.v2rayN'; Name = 'v2rayN'; }
 )
 
 # ---------------------------------------
