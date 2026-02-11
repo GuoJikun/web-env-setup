@@ -226,7 +226,7 @@ $optionalPkgs = @(
     @{ Id = 'Google.Chrome'; Name = 'Google Chrome'; },
     @{ Id = 'Mozilla.Firefox'; Name = 'Mozilla Firefox'; },
     @{ Id = 'Tencent.QQ'; Name = 'QQ'; },
-    @{ Id = 'Tencent.WeChat'; Name = 'WeChat'; }
+    @{ Id = 'Tencent.WeChat.Universal'; Name = 'WeChat'; }
 )
 
 function Show-MultiSelect {
